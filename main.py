@@ -8,7 +8,7 @@ load_dotenv()
 from fastapi import FastAPI, UploadFile, File, Form
 from typing import List
 from cloudinary_utils import upload_image
-from supabase_client import supabase
+from supabase import supabase
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
