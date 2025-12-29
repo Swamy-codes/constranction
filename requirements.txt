@@ -5,6 +5,7 @@ cloudinary==1.44.1
 
 # Supabase & dependencies
 supabase==2.3.4
+httpx==0.27.2
 supafunc==0.3.3
 postgrest==0.15.1
 gotrue==2.9.1
