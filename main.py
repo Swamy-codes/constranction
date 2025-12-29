@@ -90,14 +90,11 @@ async def create_project(
     image_urls = []
 
     for image in images:
-        try:
-            contents = await image.read()
-            url = upload_image(BytesIO(contents))
-            if not url:
-                raise ValueError("Empty URL returned from upload_image")
-            image_urls.append(url)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Image upload failed: {e}")
+        contents = await image.read()
+        url = upload_image(BytesIO(contents))
+        if not url:
+            raise HTTPException(status_code=500, detail="Image upload failed")
+        image_urls.append(url)
 
     try:
         response = supabase.table("projects").insert({
@@ -108,13 +105,10 @@ async def create_project(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Supabase insert failed: {e}")
 
-    return {
-        "message": "Project created successfully",
-        "data": data
-    }
+    return {"message": "Project created successfully", "data": data}
 
 # --------------------
-# Uvicorn entrypoint (optional for local run)
+# Uvicorn entrypoint for local run
 # --------------------
 if __name__ == "__main__":
     import uvicorn
