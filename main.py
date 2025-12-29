@@ -1,22 +1,24 @@
-# main.py
 from dotenv import load_dotenv
 import os
 
-# MUST be called **before importing supabase_client**
+# Must be called first
 load_dotenv()
 
 from fastapi import FastAPI, UploadFile, File, Form
 from typing import List
 from cloudinary_utils import upload_image
-from supabase import supabase
+from supabase import create_client, Client
 from fastapi.middleware.cors import CORSMiddleware
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 app = FastAPI()
 
-# Allow frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # restrict later
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
