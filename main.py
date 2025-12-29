@@ -3,8 +3,36 @@ from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
-from cloudinary_utils import upload_image
+from cloudinary import config, uploader
+from io import BytesIO
 
+# --------------------
+# Load .env locally only
+# --------------------
+if os.getenv("RENDER") != "true":
+    from dotenv import load_dotenv
+    load_dotenv()
+
+# --------------------
+# Configure Cloudinary
+# --------------------
+config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+)
+
+def upload_image(file_bytes: BytesIO) -> str:
+    try:
+        result = uploader.upload(file_bytes)
+        return result.get("secure_url", "")
+    except Exception as e:
+        print("Cloudinary upload error:", e)
+        return ""
+
+# --------------------
+# Initialize FastAPI
+# --------------------
 app = FastAPI(title="Project Management API")
 
 # --------------------
@@ -19,34 +47,34 @@ app.add_middleware(
 )
 
 # --------------------
-# Health check (CRITICAL for Replit)
+# Health check
 # --------------------
 @app.get("/")
 def health():
     return {"status": "ok"}
 
 # --------------------
-# Supabase (SAFE INIT)
+# Supabase client
 # --------------------
 supabase: Optional[Client] = None
 
 @app.on_event("startup")
 def init_supabase():
     global supabase
-
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_KEY")
 
     if not url or not key:
         print("⚠️ Supabase not configured")
+        supabase = None
         return
 
     try:
         supabase = create_client(url, key)
         print("✅ Supabase connected")
     except Exception as e:
-        print("❌ Supabase init failed:", e)
         supabase = None
+        print("❌ Supabase init failed:", e)
 
 # --------------------
 # Create project endpoint
@@ -64,7 +92,7 @@ async def create_project(
     for image in images:
         try:
             contents = await image.read()
-            url = upload_image(contents)
+            url = upload_image(BytesIO(contents))
             if not url:
                 raise ValueError("Empty URL returned from upload_image")
             image_urls.append(url)
@@ -76,9 +104,7 @@ async def create_project(
             "description": description,
             "image_urls": image_urls
         }).execute()
-
         data = getattr(response, "data", None)
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Supabase insert failed: {e}")
 
@@ -86,3 +112,11 @@ async def create_project(
         "message": "Project created successfully",
         "data": data
     }
+
+# --------------------
+# Uvicorn entrypoint (optional for local run)
+# --------------------
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
