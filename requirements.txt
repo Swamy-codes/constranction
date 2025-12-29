@@ -1,19 +1,6 @@
-fastapi==0.111.0
-uvicorn==0.30.1
-python-dotenv==1.0.1
-cloudinary==1.44.1
-
-# Supabase & dependencies - UPDATED
-supabase==2.3.4
-httpx==0.25.2  # ⚠️ PIN THIS VERSION
-
-# Remove these or comment them out as they're dependencies of supabase
-# supafunc==0.3.3
-# postgrest==0.15.1
-# gotrue==2.9.1
-# realtime==1.0.6
-# storage3==0.7.7
-
-# Optional utilities (recommended)
-typing-extensions==4.15.0
-orjson==3.11.5
+fastapi
+uvicorn
+python-dotenv
+supabase
+cloudinary
+python-multipart
