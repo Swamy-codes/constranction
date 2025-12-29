@@ -1,15 +1,15 @@
 import os
+from typing import List
 
 # Load .env only in local development (Render sets RENDER=true)
-if os.getenv("RENDER") is None:
+if os.getenv("RENDER") != "true":
     from dotenv import load_dotenv
     load_dotenv()
 
-from fastapi import FastAPI, UploadFile, File, Form
-from typing import List
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
-from cloudinary_utils import upload_image
+from cloudinary_utils import upload_image  # Make sure this exists and returns URL
 
 # ---- Supabase configuration ----
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -21,11 +21,11 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ---- FastAPI app ----
-app = FastAPI()
+app = FastAPI(title="Project Management API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # change in production if needed
+    allow_origins=["*"],  # For production, replace with your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,7 +36,7 @@ app.add_middleware(
 def health():
     return {"status": "ok"}
 
-# ---- Create project ----
+# ---- Create project endpoint ----
 @app.post("/projects")
 async def create_project(
     description: str = Form(...),
@@ -45,16 +45,28 @@ async def create_project(
     image_urls = []
 
     for image in images:
-        contents = await image.read()
-        url = upload_image(contents)
-        image_urls.append(url)
+        try:
+            contents = await image.read()
+            url = upload_image(contents)
+            if not url:
+                raise ValueError("Empty URL returned from upload_image")
+            image_urls.append(url)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
 
-    response = supabase.table("projects").insert({
-        "description": description,
-        "image_urls": image_urls
-    }).execute()
+    try:
+        response = supabase.table("projects").insert({
+            "description": description,
+            "image_urls": image_urls
+        }).execute()
+
+        # Supabase response can be tuple or object
+        data = getattr(response, "data", None) or (response[0] if isinstance(response, tuple) else None)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Supabase insert failed: {str(e)}")
 
     return {
         "message": "Project created successfully",
-        "data": response.data
+        "data": data
     }
